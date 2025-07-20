@@ -251,12 +251,7 @@ namespace AntDesign
         [Parameter]
         public EventCallback OnClearSelected { get; set; }
 
-        /// <summary>
-        /// Child content to be rendered inside the <see cref="Cascader"/>.
-        /// </summary>
-        [Parameter]
-        [PublicApi("1.2.0")]
-        public RenderFragment ChildContent { get; set; }
+        protected virtual RenderFragment TriggerContent { get; }
 
         /// <summary>
         /// ChildElement with ElementReference set to avoid wrapping div.
@@ -432,18 +427,14 @@ namespace AntDesign
             }
         }
 
-        /// <summary>
-        /// Used for rendering select options manually.
-        /// </summary>
-        [Parameter]
-        public RenderFragment SelectOptions { get; set; }
-
         internal List<SelectOptionItem<TItemValue, TItem>> AddedTags { get; } = new();
 
         internal SelectOptionItem<TItemValue, TItem> CustomTagSelectOptionItem { get; set; }
 
         internal bool Focused { get; set; }
         internal bool HasTagCount { get; set; }
+
+        internal virtual bool HasSelectOptions => false;
 
         /// <summary>
         /// How long (number of characters) a tag will be.
@@ -664,27 +655,35 @@ namespace AntDesign
         /// <param name="label">Creation based on passed label</param>
         /// <param name="isActive">if set to <c>true</c> [is active].</param>
         /// <returns></returns>
-        protected SelectOptionItem<TItemValue, TItem> CreateSelectOptionItem(string label, bool isActive)
+        protected virtual SelectOptionItem<TItemValue, TItem> CreateSelectOptionItem(string label, bool isActive)
         {
-            var value = GetItemValueFromLabel(label);
-            TItem item;
-            if (_isPrimitive)
-            {
-                item = (TItem)TypeDescriptor.GetConverter(typeof(TItem)).ConvertFromInvariantString(_searchValue);
-            }
-            else
-            {
-                if (_setValue == null)
-                {
-                    item = THelper.ChangeType<TItem>(value);
-                }
-                else
-                {
-                    item = Activator.CreateInstance<TItem>();
-                    _setValue(item, value);
-                }
+            TItemValue value = default;
+            TItem item = default;
 
-                _setLabel?.Invoke(item, _searchValue);
+            try
+            {
+                if (typeof(TItem) == typeof(string))
+                {
+                    item = (TItem)(object)label;
+                    value = (TItemValue)(object)label;
+                }
+                else if (Mode == SelectMode.Tags && CustomTagLabelToValue != null)
+                {
+                    try
+                    {
+                        value = CustomTagLabelToValue(label);
+                    }
+                    catch
+                    {
+                        value = default;
+                    }
+                }
+            }
+            catch
+            {
+                // If any conversion fails, use default values
+                value = default;
+                item = default;
             }
 
             return new SelectOptionItem<TItemValue, TItem>
@@ -700,6 +699,24 @@ namespace AntDesign
 
         protected bool IsOptionEqualToNoValue(SelectOptionItem<TItemValue, TItem> option)
             => EqualityComparer<TItemValue>.Default.Equals(option.Value, default);
+
+        internal virtual void AddOptionItem(SelectOptionItem<TItemValue, TItem> optionItem)
+        {
+            SelectOptionItems.Add(optionItem);
+        }
+
+        internal void RemoveOptionItem(SelectOptionItem<TItemValue, TItem> optionItem)
+        {
+            SelectOptionItems.Remove(optionItem);
+            if (optionItem.IsSelected)
+            {
+                SelectedOptionItems.Remove(optionItem);
+            }
+            if (optionItem.IsAddedTag)
+            {
+                AddedTags.Remove(optionItem);
+            }
+        }
 
         internal void RemoveEqualityToNoValue(SelectOptionItem<TItemValue, TItem> option)
         {
@@ -828,7 +845,7 @@ namespace AntDesign
             }
             else
             {
-                if (LabelInValue && SelectOptions != null)
+                if (LabelInValue && HasSelectOptions)
                 {
                     // Embed the label into the value and return the result as json string.
                     var valueLabel = new ValueLabel<TItemValue>
@@ -928,12 +945,12 @@ namespace AntDesign
                     }
                 }
 
-                await InvokeValuesChanged(selectOption);
+                InvokeValuesChanged(selectOption);
                 await UpdateOverlayPositionAsync();
             }
         }
 
-        protected async Task InvokeValuesChanged(SelectOptionItem<TItemValue, TItem> newSelection = null)
+        protected void InvokeValuesChanged(SelectOptionItem<TItemValue, TItem> newSelection = null)
         {
             List<TItemValue> newSelectedValues;
             if (newSelection is null || Values is null)
@@ -1286,7 +1303,7 @@ namespace AntDesign
 
         protected abstract Task OnOverlayVisibleChangeAsync(bool visible);
 
-        protected abstract void OnInputAsync(ChangeEventArgs e);
+        protected abstract Task OnInputAsync(ChangeEventArgs e);
 
         protected virtual async Task OnKeyUpAsync(KeyboardEventArgs e)
         {

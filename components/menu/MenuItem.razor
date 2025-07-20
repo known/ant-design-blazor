@@ -5,7 +5,7 @@
 <CascadingValue Value="this" IsFixed>
     @if (ShowTooltip)
     {
-        <Tooltip TitleTemplate="@content" Placement="@Placement.Right" Disabled="TooltipDisabled">
+        <Tooltip @ref="_tooltip" TitleTemplate="@content" Placement="@Placement.Right" Disabled="TooltipDisabled">
             <Unbound Context="tooltip">
                 @MenuItemContent(tooltip)
             </Unbound>
@@ -30,7 +30,7 @@
                 }
                 else
                 {
-                    <MenuLink Href="@RouterLink" Match="@RouterMatch">@content</MenuLink>
+                    <MenuLink Href="@RouterLink" Match="@RouterMatch" Target="Target">@content</MenuLink>
                 }
             </span>
         </li>;

@@ -157,6 +157,19 @@ namespace AntDesign
             SelectionChanged();
         }
 
+        void ITable.UnSelectSelection(ISelectionColumn selectItem)
+        {
+            _preventRowDataTriggerSelectedRowsChanged = true;
+
+            ClearSelectedRows();
+            selectItem.RowData.SetSelected(false, selectItem.Type == SelectionType.Radio || selectItem.CheckStrictly);
+
+            _preventRowDataTriggerSelectedRowsChanged = false;
+
+            _selection?.StateHasChanged();
+            SelectionChanged();
+        }
+
         private void SelectItem(TItem item)
         {
             _preventRowDataTriggerSelectedRowsChanged = true;
@@ -177,6 +190,12 @@ namespace AntDesign
         /// <param name="items"></param>
         public void SetSelection(IEnumerable<TItem> items)
         {
+            UpdateSelection(items);
+            SelectionChanged();
+        }
+
+        private void UpdateSelection(IEnumerable<TItem> items)
+        {
             if (items.SequenceEqual(_selectedRows, this))
                 return;
 
@@ -193,7 +212,6 @@ namespace AntDesign
             _preventRowDataTriggerSelectedRowsChanged = false;
 
             _selection?.StateHasChanged();
-            SelectionChanged();
         }
 
         /// <summary>

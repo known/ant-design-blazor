@@ -206,6 +206,13 @@ namespace AntDesign
         [Parameter]
         public bool Centered { get; set; }
 
+        /// <summary>
+        /// Whether to render the tabs standalone in a card, otherwise it will be rendered as a part of a TabbedCard by default.
+        /// </summary>
+        [PublicApi("1.4.1")]
+        [Parameter]
+        public bool StandaloneInCard { get; set; }
+
         [CascadingParameter]
         private Card Card { get; set; }
 
@@ -260,6 +267,8 @@ namespace AntDesign
 
         private bool IsOverflowed => _scrollListWidth <= _wrapperWidth;
 
+        private bool IsTabbedCard => Card != null && !StandaloneInCard;
+
         private readonly int _dropDownBtnWidth = 46;
         private readonly int _addBtnWidth = 40;
         private bool _shownDropdown;
@@ -283,8 +292,8 @@ namespace AntDesign
                 .If($"{PrefixCls}-line", () => Type == TabType.Line)
                 .If($"{PrefixCls}-editable-card", () => Type == TabType.EditableCard)
                 .If($"{PrefixCls}-card", () => Type.IsIn(TabType.EditableCard, TabType.Card))
-                .If($"{PrefixCls}-large", () => Size == TabSize.Large || (Card != null && Card.Size != CardSize.Small))
-                .If($"{PrefixCls}-head-tabs", () => Card != null)
+                .If($"{PrefixCls}-large", () => Size == TabSize.Large || (IsTabbedCard && Card.Size != CardSize.Small))
+                .If($"{PrefixCls}-head-tabs", () => IsTabbedCard)
                 .If($"{PrefixCls}-small", () => Size == TabSize.Small)
                 .If($"{PrefixCls}-no-animation", () => !Animated)
                 .If($"{PrefixCls}-centered", () => Centered)
@@ -308,7 +317,7 @@ namespace AntDesign
                 .Add($"{PrefixCls}-nav")
                 .If(TabBarClass, () => !string.IsNullOrWhiteSpace(TabBarClass));
 
-            if (Card is not null)
+            if (IsTabbedCard)
             {
                 Card.SetTabs(RenderTabs);
                 Card.SetTabPanels(RenderTabPanels);
@@ -440,13 +449,13 @@ namespace AntDesign
 
         internal async Task HandleTabClick(TabPane tabPane)
         {
-            if (tabPane.IsActive)
-                return;
-
             if (OnTabClick.HasDelegate)
             {
                 await OnTabClick.InvokeAsync(tabPane.Key);
             }
+
+            if (tabPane.IsActive)
+                return;
 
             ActivatePane(tabPane.Key);
         }
@@ -549,13 +558,17 @@ namespace AntDesign
 
             _retryingGetSize = false;// each activation only can try once
             TryRenderInk();
-            if (Card?.Body == null)
+
+            if (IsTabbedCard)
             {
-                Card?.SetBody(EmptyRenderFragment);
-            }
-            else
-            {
-                Card?.InvokeStateHasChagned();
+                if (Card.Body == null)
+                {
+                    Card.SetBody(EmptyRenderFragment);
+                }
+                else
+                {
+                    Card.InvokeStateHasChagned();
+                }
             }
 
             // render the classname of the actived tab
@@ -611,18 +624,31 @@ namespace AntDesign
 
         private async Task ResetSizes()
         {
+            if (IsDisposed)
+                return;
+
             ElementReference[] refs = [_navListRef, _navWarpRef, .. _tabs.Select(x => x.TabRef).ToArray()];
             _itemRefs = await JsInvokeAsync<Dictionary<string, HtmlElement>>(JSInteropConstants.GetElementsDomInfo, refs);
-            var navList = _itemRefs[Id + "-nav-list"];
-            var navWarp = _itemRefs[Id + "-nav-warpper"];
 
-            _scrollListWidth = navList.ClientWidth;
-            _scrollListHeight = navList.ClientHeight;
-            _wrapperWidth = navWarp.ClientWidth;
-            _wrapperHeight = navWarp.ClientHeight;
+            if (_itemRefs == null)
+            {
+                return;
+            }
 
-            _itemRefs.Remove(Id + "-nav-list");
-            _itemRefs.Remove(Id + "-nav-warpper");
+            var navListKey = Id + "-nav-list";
+            var navWrapperKey = Id + "-nav-wrapper";
+
+            // Use TryGetValue to safely access dictionary keys
+            if (_itemRefs.TryGetValue(navListKey, out var navList) && _itemRefs.TryGetValue(navWrapperKey, out var navWarp))
+            {
+                _scrollListWidth = navList.ClientWidth;
+                _scrollListHeight = navList.ClientHeight;
+                _wrapperWidth = navWarp.ClientWidth;
+                _wrapperHeight = navWarp.ClientHeight;
+
+                _itemRefs.Remove(navListKey);
+                _itemRefs.Remove(navWrapperKey);
+            }
         }
 
         private void UpdateScrollListPosition()
@@ -781,7 +807,7 @@ namespace AntDesign
                 }
             }
 
-            if (Card is not null)
+            if (IsTabbedCard)
             {
                 Card.InvokeStateHasChagned();
             }

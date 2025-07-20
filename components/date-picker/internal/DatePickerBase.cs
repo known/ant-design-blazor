@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using AntDesign.core.Extensions;
+using AntDesign.Core.Extensions;
 using AntDesign.Core;
 using AntDesign.Core.Documentation;
 using AntDesign.Datepicker.Locale;
@@ -387,7 +387,14 @@ namespace AntDesign
         /// <default value="false" />
         [Parameter]
         public bool Use12Hours { get; set; }
-
+        
+        /// <summary>
+        /// When true, will show week column in date panel
+        /// </summary>
+        /// <default value="false" />
+        [Parameter]
+        public bool ShowWeek { get; set; }
+        
         /// <summary>
         /// Date used for "Today"
         /// </summary>
@@ -883,7 +890,7 @@ namespace AntDesign
             if (input != null)
             {
                 input.IsOnFocused = false;
-                await JsInvokeAsync(JSInteropConstants.Blur, input.Ref);
+                await BlurAsync(input.Ref);
                 _needRefresh = true;
             }
         }

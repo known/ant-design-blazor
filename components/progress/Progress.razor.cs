@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -37,8 +36,6 @@ namespace AntDesign
         private string _circleTrailStyle;
         private string _circlePathStyle;
         private string _circleSuccessStyle;
-
-        private static readonly Regex _hexColor = new(@"^#(?<r>[a-fA-F0-9]{2})(?<g>[a-fA-F0-9]{2})(?<b>[a-fA-F0-9]{2})$");
 
         #region Parameters
 
@@ -150,7 +147,7 @@ namespace AntDesign
 
         #endregion Parameters
 
-        private readonly Hashtable _sizeMap = new Hashtable()
+        private static readonly Dictionary<ProgressSize, int> _sizeMap = new()
         {
             [ProgressSize.Small] = 6,
             [ProgressSize.Default] = 8,
@@ -168,14 +165,12 @@ namespace AntDesign
 
             if (StrokeWidth <= 0)
             {
-                if (Type == ProgressType.Line)
+                var size = Type switch
                 {
-                    StrokeWidth = (int)_sizeMap[Size];
-                }
-                else // Type is Circle or Dashboard
-                {
-                    StrokeWidth = (int)_sizeMap[ProgressSize.Small];
-                }
+                    ProgressType.Line => Size,
+                    _ => ProgressSize.Small // Type is Circle or Dashboard
+                };
+                StrokeWidth = _sizeMap[size];
             }
 
             if (Status is null && Percent is double percent && percent == 100)
@@ -234,11 +229,11 @@ namespace AntDesign
                 _circleTrailStyle = FormattableString.Invariant($"stroke:{TrailColor}; transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference}px, {CircleDash}px; stroke-dashoffset: {dashoffset}px;");
                 if (SuccessPercent == 0)
                 {
-                    _circlePathStyle = FormattableString.Invariant($"transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference * Percent / 100}px, {CircleDash}px; stroke-dashoffset: {dashoffset}px;");
+                    _circlePathStyle = FormattableString.Invariant($"{GetCircleColor()};transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference * Percent / 100}px, {CircleDash}px; stroke-dashoffset: {dashoffset}px;");
                 }
                 else
                 {
-                    _circlePathStyle = FormattableString.Invariant($"transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference * (Percent - SuccessPercent) / 100}px, {CircleDash}px; stroke-dashoffset: {dashoffset}px;");
+                    _circlePathStyle = FormattableString.Invariant($"{GetCircleColor()};transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference * (Percent - SuccessPercent) / 100}px, {CircleDash}px; stroke-dashoffset: {dashoffset}px;");
                     _circleSuccessStyle = FormattableString.Invariant($"transition:stroke-dashoffset 0.3s, stroke-dasharray 0.3s, stroke 0.3s, stroke-width 0.06s 0.3s; stroke-dasharray: {circumference * SuccessPercent / 100}px, {CircleDash}px; stroke-dashoffset: {dashoffset - circumference * SuccessPercent / 100}px;");
                 }
             }
@@ -246,7 +241,7 @@ namespace AntDesign
 
         private string GetCircleColor()
         {
-            var baseColor = "";
+            var baseColor = string.Empty;
             if (StrokeColor.Value == null)
             {
                 return baseColor;
@@ -312,9 +307,20 @@ namespace AntDesign
             return style.ToString();
         }
 
+#if NET7_0_OR_GREATER
+        [GeneratedRegex(@"^#(?<r>[a-fA-F0-9]{2})(?<g>[a-fA-F0-9]{2})(?<b>[a-fA-F0-9]{2})$")]
+        private static partial Regex HexColor();
+#else
+        private static readonly Regex _hexColor = new(@"^#(?<r>[a-fA-F0-9]{2})(?<g>[a-fA-F0-9]{2})(?<b>[a-fA-F0-9]{2})$");
+#endif
+
         private string ToRGB(string color)
         {
+#if NET7_0_OR_GREATER
+            var hexMatch = HexColor().Match(color);
+#else
             var hexMatch = _hexColor.Match(color);
+#endif
             if (!hexMatch.Success)
             {
                 throw new ArgumentOutOfRangeException($"{nameof(StrokeColor)}'s value must be like \"#ffffff\"");

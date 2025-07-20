@@ -338,8 +338,6 @@ namespace AntDesign
                 .If($"{PrefixCls}-inline-collapsed", () => _inlineCollapsed)
                 .If($"{PrefixCls}-unselectable", () => !Selectable)
                 .If($"{PrefixCls}-rtl", () => RTL);
-
-            StateHasChanged();
         }
 
         protected override void OnInitialized()
@@ -358,12 +356,6 @@ namespace AntDesign
             SetClass();
         }
 
-        protected override Task OnFirstAfterRenderAsync()
-        {
-            MenusService.SetMenuItems(_menuItems);
-            return base.OnFirstAfterRenderAsync();
-        }
-
         internal void AddSubmenu(SubMenu menu)
         {
             _submenus.Add(menu);
@@ -372,6 +364,7 @@ namespace AntDesign
         internal void AddMenuItem(MenuItem item)
         {
             _menuItems.Add(item);
+            MenusService.SetMenuItem(item);
         }
 
         internal void RemoveSubmenu(SubMenu menu)
@@ -406,7 +399,7 @@ namespace AntDesign
                 InternalMode = Mode;
             }
 
-            SetClass();
+            StateHasChanged();
         }
 
         private void HandleOpenChange(string[] openKeys)

@@ -61,6 +61,12 @@ namespace AntDesign
         /// <default value="NavLinkMatch.All" />
         [Parameter]
         public NavLinkMatch RouterMatch { get; set; } = NavLinkMatch.All;
+        
+        /// <summary>
+        /// Allows specification of the HTML `target` attribute
+        /// </summary>
+        [Parameter]
+        public MenuTarget? Target { get; set; }
 
         /// <summary>
         /// Title of the menu item
@@ -83,6 +89,8 @@ namespace AntDesign
         internal bool IsSelected { get; private set; }
         internal bool FirstRun { get; set; } = true;
         private string _key;
+        private Tooltip _tooltip;
+
         private bool TooltipDisabled => ParentMenu?.IsOpen == true || ParentMenu?._overlayVisible == true || RootMenu?.InlineCollapsed == false;
 
         private int Padding => RootMenu?.InternalMode == MenuMode.Inline ? ((ParentMenu?.Level ?? 0) + 1) * RootMenu?.InlineIndent ?? 0 : 0;
@@ -121,6 +129,8 @@ namespace AntDesign
 
             if (RootMenu?.SelectedKey(Key) == true && !IsSelected)
                 Select();
+
+            _tooltip?.SetShouldRender(true);
         }
 
         protected override void Dispose(bool disposing)

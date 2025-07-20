@@ -91,7 +91,7 @@ namespace AntDesign
 
                 rowCache.Add(hashCode, groupRowData);
             }
-            
+
             groupRowData.Children = grouping.Children.SelectMany(x =>
                     x.Key == null
                         ? x.Items.Select((data, index) => GetRowData(data, index + rowIndex, level + 1, rowCache))
@@ -120,7 +120,7 @@ namespace AntDesign
             }
 
             currentDataItem.Data = data;
-            currentDataItem.Children = TreeChildren(data);
+            currentDataItem.Children = TreeChildren?.Invoke(data);
             // this row cache may be for children rows
             rowCache ??= _rootRowDataCache;
 
@@ -128,6 +128,7 @@ namespace AntDesign
             {
                 currentRowData = new RowData<TItem>(currentDataItem)
                 {
+                    Key = dataHashCode.ToString(),
                     Expanded = DefaultExpandAllRows && level < DefaultExpandMaxLevel
                 };
                 rowCache.Add(dataHashCode, currentRowData);

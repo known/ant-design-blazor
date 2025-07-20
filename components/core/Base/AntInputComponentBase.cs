@@ -59,25 +59,18 @@ namespace AntDesign
         /// <summary>
         /// Validation messages for the FormItem
         /// </summary>
-        public string[] ValidationMessages { get; private set; } = Array.Empty<string>();
+        public string[] ValidationMessages { get; private set; } = [];
 
         private FormSize _formSize;
 
         [CascadingParameter(Name = "FormSize")]
         public FormSize? FormSize
         {
-            get
-            {
-                return _formSize;
-            }
+            get => _formSize;
             set
             {
-                if (value.HasValue)
-                    _formSize = value.Value;
-                else
-                    _formSize = AntDesign.FormSize.Default;
-
-                Size = (InputSize)_formSizeMap[value];
+                _formSize = value.GetValueOrDefault(AntDesign.FormSize.Default);
+                Size = _formSizeMap[_formSize];
             }
         }
 
@@ -235,6 +228,31 @@ namespace AntDesign
         protected bool _isNotifyFieldChanged = true;
         private bool _isValueGuid;
 
+        protected void ForceUpdateValueString(string value)
+        {
+            CurrentValueAsString = null;
+
+            CallAfterRender(async () =>
+            {
+                _value = default;
+                CurrentValueAsString = value;
+                if (TryParseValueFromString(value, out var parsedValue, out var validationErrorMessage))
+                {
+                    _value = parsedValue;
+                    _setValueDelegate?.Invoke(Form.Model, parsedValue);
+                    await ValueChanged.InvokeAsync(parsedValue);
+
+                    OnCurrentValueChange(parsedValue);
+
+                    if (_isNotifyFieldChanged && FieldIdentifier is { Model: not null, FieldName: not null })
+                    {
+                        EditContext?.NotifyFieldChanged(FieldIdentifier);
+                    }
+                }
+            });
+            StateHasChanged();
+        }
+
         /// <summary>
         /// Constructs an instance of <see cref="InputBase{TValue}"/>.
         /// </summary>
@@ -385,7 +403,7 @@ namespace AntDesign
             }
         }
 
-        private readonly Hashtable _formSizeMap = new Hashtable()
+        private static readonly Dictionary<FormSize, InputSize> _formSizeMap = new()
         {
             [AntDesign.FormSize.Large] = InputSize.Large,
             [AntDesign.FormSize.Default] = InputSize.Default,

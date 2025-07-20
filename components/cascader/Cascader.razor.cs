@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AntDesign.Core.Documentation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 
@@ -97,6 +98,15 @@ namespace AntDesign
             }
         }
 
+        /// <summary>
+        /// Child content to be rendered inside the <see cref="Cascader"/>.
+        /// </summary>
+        [Parameter]
+        [PublicApi("1.2.0")]
+        public RenderFragment ChildContent { get; set; }
+
+        protected override RenderFragment TriggerContent => ChildContent;
+
         private List<CascaderNode> _nodelist = new List<CascaderNode>();
         private List<CascaderNode> _selectedNodes = new List<CascaderNode>();
         private List<CascaderNode> _hoverSelectedNodes = new List<CascaderNode>();
@@ -118,7 +128,6 @@ namespace AntDesign
         private bool _initialized;
         private string _searchValue;
         private ElementReference _inputRef;
-        private string _placeHolder = LocaleProvider.CurrentLocale.Global.Placeholder;
 
         private bool _focused;
 
@@ -142,6 +151,7 @@ namespace AntDesign
         protected override void OnInitialized()
         {
             base.OnInitialized();
+            
             SetDefaultValue(Value ?? DefaultValue);
         }
 
@@ -493,9 +503,9 @@ namespace AntDesign
             }
         }
 
-        protected override void OnInputAsync(ChangeEventArgs e)
+        protected override Task OnInputAsync(ChangeEventArgs e)
         {
-
+            return Task.CompletedTask;
         }
 
         protected override async Task OnKeyUpAsync(KeyboardEventArgs e)

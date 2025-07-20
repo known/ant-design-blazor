@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -41,7 +41,7 @@ namespace AntDesign
 
         protected override bool EnableOnPressEnter => OnSearch.HasDelegate || OnPressEnter.HasDelegate;
 
-        private readonly Hashtable _buttonSizeMap = new Hashtable()
+        private static readonly Dictionary<InputSize, ButtonSize> _buttonSizeMap = new()
         {
             [InputSize.Large] = ButtonSize.Large,
             [InputSize.Default] = ButtonSize.Default,
@@ -153,10 +153,10 @@ namespace AntDesign
             await SearchAsync();
         }
 
-        protected override async Task OnPressEnterAsync()
+        protected override async Task OnPressEnterAsync(PressEnterEventArgs args)
         {
+            await base.OnPressEnterAsync(args);
             await SearchAsync();
-            await base.OnPressEnterAsync();
         }
 
         private async Task SearchAsync()
